@@ -13,6 +13,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# GA 路径 (LLM 清洗用)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "Beneh", "GA"))
+
 from models.models import CompanyBase, SupplyRelation, RawTextInput, CleanResult
 
 app = FastAPI(title="A-supply-analysis", version="0.1.0")
