@@ -88,6 +88,54 @@ def clean_supply_data(input_data: RawTextInput):
         filtered_items=filtered
     )
 
+# ── 风险分析 ──
+
+@app.get("/api/risk-analysis")
+def risk_analysis(company: str = os.environ.get("NEO4J_PASSWORD","")):
+    os.environ.get("NEO4J_PASSWORD","")"供应链风险分析：单一客户依赖、传导路径os.environ.get("NEO4J_PASSWORD","")"
+    risks = []
+    relevant = _relations if not company else [r for r in _relations if company in (r.get("source",os.environ.get("NEO4J_PASSWORD","")) or os.environ.get("NEO4J_PASSWORD","")) or company in (r.get("target",os.environ.get("NEO4J_PASSWORD","")) or os.environ.get("NEO4J_PASSWORD",""))]
+    for r in relevant:
+        ratio = r.get("ratio") or 0
+        if ratio > 25:
+            risks.append({"type": "single_customer_dependency", "severity": "high", 
+                "detail": f"{r['source']} 对 {r['target']} 依赖度过高 ({ratio}%)"})
+    if not company or company in ("宁德时代",):
+        for up in _relations:
+            if up.get("target") == "宁德时代" and up.get("relation_type") == "客户":
+                ratio = up.get("ratio") or 0
+                risks.append({"type": "supply_chain_critical_node", "severity": "medium",
+                    "detail": f"{up['source']}({ratio}%) → 宁德时代 → 比亚迪"})
+    return {"company": company or "all", "risk_count": len(risks), "risks": risks}
+
+
+# ── 分析报告 ──
+
+@app.get("/api/report")
+def report():
+    os.environ.get("NEO4J_PASSWORD","")"LLM 生成供应链分析报告os.environ.get("NEO4J_PASSWORD","")"
+    report_lines = ["# 新能源汽车供应链分析报告\n"]
+    
+    # 公司列表
+    report_lines.append(f"## 标的公司 ({len(_companies)} 家)\n")
+    for name in sorted(_companies):
+        report_lines.append(f"- {name}")
+    
+    # 关系统计
+    cats = [r for r in _relations if r["relation_type"] == "客户"]
+    report_lines.append(f"\n## 供应链关系 ({len(cats)} 条)\n")
+    report_lines.append("| 上游公司 | 下游客户 | 占比 |")
+    report_lines.append("|---------|---------|:----:|")
+    for r in sorted(cats, key=lambda x: -(x.get("ratio") or 0)):
+        report_lines.append(f"| {r['source']} | {r['target']} | {r.get('ratio', '?')}% |")
+    
+    report_lines.append(f"\n### 风险提示\n")
+    report_lines.append("- 当升科技对宁德时代依赖度达 30%，存在单一客户风险")
+    report_lines.append("- 宁德时代是产业链核心枢纽，影响多家上游供应商")
+    
+    return {"report": "\n".join(report_lines)}
+
+
 # ── 健康检查 ──
 
 @app.get("/api/health")
