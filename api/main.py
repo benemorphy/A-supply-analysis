@@ -55,7 +55,11 @@ def query_supply_chains(company: str = None, year: int = None, relation_type: st
 
 @app.post("/api/supply-chains")
 def push_supply_chain(relation: SupplyRelation):
-    os.environ.get("NEO4J_PASSWORD","")"推送/添加供应链关系os.environ.get("NEO4J_PASSWORD","")"
+    os.environ.get("NEO4J_PASSWORD","")"推送/添加供应链关系（自动去重）os.environ.get("NEO4J_PASSWORD","")"
+    for r in _relations:
+        if (r.source == relation.source and r.target == relation.target 
+            and r.relation_type == relation.relation_type and r.year == relation.year):
+            return {"status": "ok", "count": len(_relations), "note": "duplicate, skipped"}
     _relations.append(relation)
     return {"status": "ok", "count": len(_relations)}
 
