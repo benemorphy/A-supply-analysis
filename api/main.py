@@ -167,39 +167,88 @@ def graph_view():
     return HTMLResponse(GRAPH_HTML)
 
 
-GRAPH_HTML = ros.environ.get("NEO4J_PASSWORD","")"
-<!DOCTYPE html>
+GRAPH_HTML = ros.environ.get("NEO4J_PASSWORD","")"<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>供应链关系图</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
-<style>body{margin:0;background:#1a1a2e;overflow:hidden;font-family:sans-serif}
+<style>
+body{margin:0;background:#0f1923;overflow:hidden;font-family:'Microsoft YaHei',sans-serif}
 svg{width:100vw;height:100vh}
-text{font-size:12px;fill:#eee;pointer-events:none}
-.links line{stroke-opacity:0.6;stroke-width:2px}
-.labels text{font-size:11px;fill:#ccc}
-.tooltip{position:absolute;background:rgba(0,0,0,0.8);color:#fff;padding:8px;border-radius:4px;font-size:13px;display:none}
+text{font-size:13px;fill:#e0e0e0;pointer-events:none;font-weight:500}
+.links line{stroke-opacity:0.7}
+.node circle{cursor:pointer;stroke:#fff;stroke-width:1.5}
+.node:hover circle{filter:brightness(1.3)}
+.node.highlight circle{stroke:#ffd700;stroke-width:3}
+.links line.highlight{stroke-opacity:1;stroke-width:3!important}
+.legend rect{stroke:#555;stroke-width:0.5}
+.legend text{font-size:12px;fill:#ccc}
+#tooltip{position:absolute;background:rgba(15,25,35,0.95);color:#e0e0e0;padding:12px 16px;border-radius:8px;font-size:13px;display:none;border:1px solid #444;box-shadow:0 4px 12px rgba(0,0,0,0.5);line-height:1.6;max-width:300px}
+#tooltip .name{font-size:16px;font-weight:bold;color:#fff;margin-bottom:4px}
+#tooltip .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;margin:2px}
+#tooltip .tag.up{background:#1565c0;color:#fff}
+#tooltip .tag.mid{background:#2e7d32;color:#fff}
+#tooltip .tag.down{background:#e65100;color:#fff}
+#tooltip .tag.risk{background:#c62828;color:#fff}
 </style></head><body>
 <div id="tooltip" class="tooltip"></div>
 <svg id="graph"></svg>
 <script>
+const COLOR={'上游':'#4fc3f7','中游':'#66bb6a','下游':'#ff7043'}
 fetch('/api/visualize').then(r=>r.json()).then(data=>{
-  const svg=d3.select('#graph'), w=window.innerWidth, h=window.innerHeight
+  const svg=d3.select('#graph'),w=window.innerWidth,h=window.innerHeight
+  
+  // 计算节点度(连接数)作为大小
+  const degree={};data.links.forEach(l=>{degree[l.source]=1+(degree[l.source]||0);degree[l.target]=1+(degree[l.target]||0)})
+  data.nodes.forEach(n=>n.degree=degree[n.id]||1)
+  const maxDeg=d3.max(data.nodes,d=>d.degree)||1
+  
   const sim=d3.forceSimulation(data.nodes)
-    .force('link',d3.forceLink(data.links).id(d=>d.id).distance(200))
-    .force('charge',d3.forceManyBody().strength(-500))
+    .force('link',d3.forceLink(data.links).id(d=>d.id).distance(250).strength(d=>1/(1+d.value/10)))
+    .force('charge',d3.forceManyBody().strength(-800))
     .force('center',d3.forceCenter(w/2,h/2))
+    .force('collision',d3.forceCollide().radius(d=>8+20*d.degree/maxDeg))
+  
   const link=svg.append('g').selectAll('line').data(data.links).join('line')
-    .attr('stroke',d=>d.source.group==='上游'?'#4fc3f7':d=>d.target.group==='下游'?'#ff7043':'#66bb6a')
-    .attr('stroke-width',d=>Math.sqrt(d.value||10))
-  const node=svg.append('g').selectAll('circle').data(data.nodes).join('circle')
-    .attr('r',8).attr('fill',d=>d.group==='上游'?'#4fc3f7':d.group==='下游'?'#ff7043':'#66bb6a')
+    .attr('class','links').attr('stroke',d=>COLOR[d.source.group]||'#888')
+    .attr('stroke-width',d=>1+4*d.value/30).attr('stroke-dasharray',d=>d.value>25?'6,3':'0')
+  
+  const gNode=svg.append('g').selectAll('g').data(data.nodes).join('g').attr('class','node')
+  gNode.append('circle').attr('r',d=>8+12*d.degree/maxDeg)
+    .attr('fill',d=>COLOR[d.group]||'#888')
     .call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y})
       .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}))
-    .on('mouseover',(e,d)=>{d3.select('#tooltip').style('display','block').html(`${d.id}<br>环节:${d.group}`).style('left',e.pageX+10+'px').style('top',e.pageY-20+'px')})
-    .on('mouseout',()=>d3.select('#tooltip').style('display','none'))
-  const label=svg.append('g').selectAll('text').data(data.nodes).join('text').text(d=>d.id).attr('x',12).attr('y',4)
-  sim.on('tick',()=>{link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);node.attr('cx',d=>d.x).attr('cy',d=>d.y);label.attr('x',d=>d.x+12).attr('y',d=>d.y+4)})
-})
-</script></body></html>os.environ.get("NEO4J_PASSWORD","")"
+    .on('mouseover',(e,d)=>{
+      // highligh
+      gNode.filter(n=>n.id===d.id||data.links.some(l=>l.source.id===d.id&&l.target.id===n.id||l.target.id===d.id&&l.source.id===n.id)).classed('highlight',true)
+      link.filter(l=>l.source.id===d.id||l.target.id===d.id).classed('highlight',true)
+      const rels=data.links.filter(l=>l.source.id===d.id).map(l=>`<span class="tag mid">客户</span> ${l.target.id} (${l.value}%)`).join('<br>')
+      const sups=data.links.filter(l=>l.target.id===d.id).map(l=>`<span class="tag up">供应商</span> ${l.source.id} (${l.value}%)`).join('<br>')
+      const risk=data.links.filter(l=>(l.source.id===d.id||l.target.id===d.id)&&l.value>25).length
+      const riskHtml=risk?`<br><span class="tag risk">${risk}项高风险依赖</span>`:''
+      d3.select('#tooltip').style('display','block').html(
+        `<div class="name">${d.id}</div><span class="tag ${d.group==='上游'?'up':d.group==='下游'?'down':'mid'}">${d.group||'未知'}</span> 连接度:${d.degree}<br>${rels||''}${sups||''}${riskHtml}`
+      ).style('left',Math.min(e.pageX+15,w-320)+'px').style('top',Math.max(e.pageY-40,10)+'px')
+    }).on('mouseout',()=>{
+      gNode.classed('highlight',false);link.classed('highlight',false);d3.select('#tooltip').style('display','none')
+    })
+  
+  gNode.append('text').text(d=>d.id).attr('x',d=>12+8*Math.min(1,d.degree/maxDeg*2)).attr('y',4)
+  
+  // 图例
+  const leg=svg.append('g').attr('class','legend').attr('transform','translate(20,20)')
+  leg.append('rect').attr('width',180).attr('height',110).attr('fill','rgba(15,25,35,0.8)').attr('rx',6)
+  const items=[['上游','#4fc3f7'],['中游','#66bb6a'],['下游','#ff7043'],['风险(>25%)','#c62828','dash']]
+  items.forEach(([label,clr,dash],i)=>{
+    const y=20+i*22
+    leg.append('circle').attr('cx',20).attr('cy',y).attr('r',6).attr('fill',clr)
+    if(dash)leg.append('line').attr('x1',16).attr('y1',y-1).attr('x2',24).attr('y2',y-1).attr('stroke',clr).attr('stroke-width',2).attr('stroke-dasharray','4,2')
+    leg.append('text').attr('x',34).attr('y',y+4).text(label).attr('fill','#ccc')
+  })
+  
+  sim.on('tick',()=>{
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y)
+    gNode.attr('transform',d=>`translate(${d.x},${d.y})`)
+  })
+})</script></body></html>os.environ.get("NEO4J_PASSWORD","")"
 
 
 # ── 健康检查 ──
