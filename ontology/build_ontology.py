@@ -1,6 +1,4 @@
-import os
-os.environ.get("NEO4J_PASSWORD","")"供应链 OWL 本体os.environ.get("NEO4J_PASSWORD","")"
-from rdflib import Graph, Namespace, Literal, RDF, RDFS, OWL, XSD
+供应链 OWL 本体from rdflib import Graph, Namespace, Literal, RDF, RDFS, OWL, XSD
 import json, urllib.request, pathlib
 
 NS = Namespace("http://supply-chain.ontology/")

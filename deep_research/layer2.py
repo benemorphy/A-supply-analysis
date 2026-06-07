@@ -1,6 +1,4 @@
-import os
-os.environ.get("NEO4J_PASSWORD","")"Layer 2: 深度挖掘 - 关系细节 + 多年对比 + Neo4j 路径os.environ.get("NEO4J_PASSWORD","")"
-import sys, json, urllib.request, time
+Layer 2: 深度挖掘 - 关系细节 + 多年对比 + Neo4j 路径import sys, json, urllib.request, time
 sys.path.insert(0, "D:/open_claw_agent/Beneh/GA")
 from tools.metaso_search import metaso_search_text
 import mykey
@@ -22,11 +20,10 @@ print(f"已有关系: {len(rels)} 条")
 for r in rels:
     s, t = r['source'], r['target']
     text = metaso_search_text(f"{s} {t} 交易 金额 合同 占比")
-    prompt = fos.environ.get("NEO4J_PASSWORD","")"从以下文本提取 {s} 与 {t} 的交易细节。
+    prompt = f从以下文本提取 {s} 与 {t} 的交易细节。
 输出JSON: {{"amount":"金额","contract_period":"合同期","share_trend":"占比趋势","year":"年份"}}
 只输出确信的信息，不确定不写。
-文本: {text[:3000]}os.environ.get("NEO4J_PASSWORD","")"
-    
+文本: {text[:3000]}    
     data = json.dumps({"model":model,"messages":[{"role":"user","content":prompt}],"max_tokens":500}).encode()
     req = urllib.request.Request(f"{api_base}/chat/completions",data,
         {"Authorization":f"Bearer {api_key}","Content-Type":"application/json"})
@@ -50,18 +47,16 @@ with neo4j_driver.session() as session:
     
     # 导入关系
     for r in rels:
-        session.run(os.environ.get("NEO4J_PASSWORD","")"
-            MATCH (a:Company {name:$s}), (b:Company {name:$t})
+        session.run(            MATCH (a:Company {name:$s}), (b:Company {name:$t})
             CREATE (a)-[:SUPPLIES {ratio:$r}]->(b)
-        os.environ.get("NEO4J_PASSWORD","")", s=r['source'], t=r['target'], r=float(r.get('ratio',10) or 10))
+        , s=r['source'], t=r['target'], r=float(r.get('ratio',10) or 10))
     
     # 2度传导路径
-    paths = session.run(os.environ.get("NEO4J_PASSWORD","")"
-        MATCH path = (a)-[*1..2]->(c)
+    paths = session.run(        MATCH path = (a)-[*1..2]->(c)
         WHERE a <> c
         RETURN a.name + ' -> ' + reduce(s='', n IN nodes(path)[1..] | s + n.name + ' ') as full_path
         LIMIT 20
-    os.environ.get("NEO4J_PASSWORD","")").values()
+    ).values()
     for p in paths:
         print(f"  {p[0]}")
 

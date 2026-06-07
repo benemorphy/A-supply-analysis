@@ -1,11 +1,8 @@
-import os
-os.environ.get("NEO4J_PASSWORD","")"供应链数据 -> Neo4j 导入脚本os.environ.get("NEO4J_PASSWORD","")"
-
+供应链数据 -> Neo4j 导入脚本
 import sys, urllib.request, json
 sys.path.insert(0, "D:/open_claw_agent/A-supply-analysis")
 from clients.supply_client import SupplyClient
 from neo4j import GraphDatabase
-
 
 def import_to_neo4j(uri="bolt://localhost:7687", user="neo4j", password=os.environ.get("NEO4J_PASSWORD","image1969")):
     client = SupplyClient()
@@ -25,7 +22,6 @@ def import_to_neo4j(uri="bolt://localhost:7687", user="neo4j", password=os.envir
         cr = s.run("MATCH ()-[r]->() RETURN count(r)").single()[0]
         print(f"Neo4j: {cn} 节点, {cr} 关系")
     driver.close()
-
 
 if __name__ == "__main__":
     import_to_neo4j()

@@ -1,6 +1,4 @@
-import os
-os.environ.get("NEO4J_PASSWORD","")"A-supply-analysis 数据模型os.environ.get("NEO4J_PASSWORD","")"
-from pydantic import BaseModel
+A-supply-analysis 数据模型from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
