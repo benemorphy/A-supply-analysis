@@ -149,15 +149,27 @@ def report():
 
 @app.get("/api/visualize")
 def visualize():
+    """D3 力导向图 JSON - 含段分类"""
+    # 统计每个公司作为 source/target 的次数
+    src_count, tgt_count = {}, {}
+    for r in _relations:
+        src_count[r.source] = src_count.get(r.source, 0) + 1
+        tgt_count[r.target] = tgt_count.get(r.target, 0) + 1
+
     nodes = {}
     for c in _companies.values():
-        nodes[c.name] = {"id": c.name, "group": "产业链"}
-    for r_item in _relations:
-        if r_item.source not in nodes:
-            nodes[r_item.source] = {"id": r_item.source, "group": "产业链"}
-        if r_item.target not in nodes:
-            nodes[r_item.target] = {"id": r_item.target, "group": "产业链"}
-    links = [{"source": r_item.source, "target": r_item.target, "value": r_item.ratio or 10} for r_item in _relations]
+        srcs = src_count.get(c.name, 0)
+        tgts = tgt_count.get(c.name, 0)
+        # 分类规则: 只出(供应商比客户多) = 上游, 只入 = 下游, 二者均有 = 中游
+        if srcs > 0 and tgts == 0:
+            seg = "上游"
+        elif tgts > 0 and srcs == 0:
+            seg = "下游"
+        else:
+            seg = "中游"
+        nodes[c.name] = {"id": c.name, "group": seg}
+
+    links = [{"source": r.source, "target": r.target, "value": r.ratio or 10} for r in _relations]
     return {"nodes": list(nodes.values()), "links": links}
 
 @app.get("/api/graph-view")
