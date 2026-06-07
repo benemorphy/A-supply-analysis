@@ -1,105 +1,87 @@
 # A-supply-analysis
 
-供应链研究工具框架 — 为 GA 提供领域无关的供应链深度研究能力
+供应链研究方法论与工具集 — 借由 GA 完成跨领域供应链深度研究
 
 ## 定位
 
-**A-supply-analysis 不是针对某个具体行业的分析系统，而是一套可复用的工具框架。** GA 通过 RESTful API 调用本框架的能力，帮助用户在**任意领域**（新能源汽车、半导体、医药、消费电子...）进行供应链深度研究。
+本项目不是某个行业的数据分析系统，而是提供 **一套完整的方法论 + 工具框架**：
 
-## 核心能力
+- **方法论**: 三层逐层深化的供应链研究流程（标的选定 → 广度搜索 → 深度挖掘 → 智能分析）
+- **工具集**: 8 个 RESTful API 端点 + LLM 清洗管线 + 图数据库 + 可视化 + 本体推理
+- **入口**: 用户通过 GA 发起研究需求，GA 驱动本工具集完成全流程，最终交付分析结果
 
-| 能力 | 说明 | 领域无关 |
+## 研究流程
+
+```
+用户通过 GA 发起研究
+        │
+        ▼
+  ① 选定领域 + 标的公司  ←── LLM 推荐 + 用户确认
+  ② 多源搜索 & LLM 提取  ←── metaso 搜索 + 去匿名清洗
+  ③ 数据入库              ←── REST API 推送 + 自动去重
+  ④ 图分析 + 路径传导     ←── Neo4j 图数据库
+  ⑤ 风险评估              ←── 依赖度计算 + 关键节点识别
+  ⑥ 深度研究              ←── Layer 1-3 逐层深化管线
+  ⑦ 报告交付              ←── LLM 全景分析报告
+        │
+        ▼
+  用户获得研究成果
+```
+
+## 工具能力
+
+| 能力 | 说明 | 对应 API |
 |------|------|:--------:|
-| LLM 清洗管线 | 自动过滤匿名名称、提取结构化关系 | ✅ |
-| 多源搜索 + LLM 提取 | metaso 搜索 + LLM 提取供应链关系 | ✅ |
-| 图存储与分析 | Neo4j 图数据库路径传导分析 | ✅ |
-| 可视化 | D3.js 力导向图展示 | ✅ |
-| 风险分析 | 依赖度计算 + 关键节点识别 | ✅ |
-| 深度研究管线 | 三层逐层深化（广度/深度/推理） | ✅ |
-| OWL 本体建模 | 领域概念建模 + 推理规则 | ✅ |
+| 公司管理 | 增删标的公司 | `GET/POST /api/companies` |
+| 关系管理 | 推送/查询供应链关系 | `GET/POST /api/supply-chains` |
+| LLM 清洗 | 过滤匿名客户/供应商 | `POST /api/clean` |
+| 风险分析 | 单一依赖 + 关键节点 | `GET /api/risk-analysis` |
+| 分析报告 | LLM 全景报告生成 | `GET /api/report` |
+| 图谱 JSON | D3 力导向图数据 | `GET /api/visualize` |
+| 可视化页面 | 交互式 D3 图 | `GET /api/graph-view` |
+| 深度研究 | 三层管线搜索+分析 | `deep_research/layer1-3.py` |
+| OWL 本体 | 领域概念建模与推理 | `ontology/build_ontology.py` |
+| Neo4j 导入 | 图数据库路径分析 | `db/neo4j_import.py` |
 
-## 工作流程
-
-```
-用户指定领域 → GA 选定标的 → 搜索/清洗 → 入库 → 分析/可视化/风险
-     │              │            │        │           │
-     └── 任意行业    LLM 选择    去匿名     REST API    Neo4j/D3
-```
-
-## 快速开始
+## 使用方法
 
 ```bash
-# 安装依赖
-pip install fastapi uvicorn neo4j rdflib
-
 # 启动服务
 python -m uvicorn api.main:app --host 0.0.0.0 --port 8765
 
-# GA 通过客户端推送数据
+# GA 通过客户端驱动研究
 python -c "
-from clients.supply_client import SupplyClient; c=SupplyClient()
-c.add_company('CompanyA')
-c.push_relation('CompanyA', 'CompanyB', 'supplier', 2024, 30.0)
+from clients.supply_client import SupplyClient
+c = SupplyClient()
+# GA 按研究流程调用:
+c.add_company('某公司')              # 步骤 1
+result = c.clean_text('...', 2024, '...')  # 步骤 2
+c.push_relation('A','B','客户',2024,30)    # 步骤 3
+risks = c.query_risk('某公司')             # 步骤 5
 "
 ```
 
-## API 端点
+## 演示
 
-| 方法 | 端点 | 说明 |
-|------|------|------|
-| GET/POST | `/api/companies` | 公司管理 |
-| GET/POST | `/api/supply-chains` | 关系管理（自动去重） |
-| POST | `/api/clean` | LLM 清洗文本 |
-| GET | `/api/risk-analysis` | 风险分析 |
-| GET | `/api/report` | 分析报告 |
-| GET | `/api/visualize` | D3 图 JSON |
-| GET | `/api/graph-view` | D3 力导向图 |
-| GET | `/api/health` | 健康检查 |
-
-## 深度研究管线
+项目自带**新能源汽车供应链**演示数据（7 家公司），用于验证工具流程的完整性。用户可在任何领域重复此流程。
 
 ```
-Layer 1: 广度扩展
-  metaso 搜索 + LLM 提取 → FastAPI 入库 → 去重
-
-Layer 2: 深度挖掘  
-  关系细节搜索（金额/合同期/多年对比）
-  Neo4j 路径分析（A→B→C 传导）
-
-Layer 3: 智能分析
-  LLM 全景报告生成
-  风险传导模拟
-  改进建议
+上游(锂矿/材料)    中游(部件)       下游(电池/整车)
+ 天齐锂业 ──→    当升科技 ──→   宁德时代
+ 华友钴业 ──→    恩捷股份 ──→   比亚迪
+ 天赐材料 ──→
 ```
-
-## 演示场景
-
-当前项目自带的演示数据为**新能源汽车供应链**（7 家公司，覆盖上游锂矿 → 中游材料 → 下游电池整车）。此数据仅用于验证框架功能，实际使用时可通过 GA 对任意领域进行全流程研究。
-
-## 技术栈
-
-- **后端**: FastAPI / Python 3.11
-- **图数据库**: Neo4j
-- **可视化**: D3.js v7
-- **LLM**: deepseek（通过 GA mykey）
-- **本体**: OWL / RDFLib
-- **代理**: Caddy
-- **搜索**: metaso_search
 
 ## 集成方式
 
-GA 通过 RESTful API 调用本框架：
-
 ```
-GA ←─ HTTP REST ─→ A-supply-analysis FastAPI (:8765)
-                       │
-                       ├── Neo4j 图数据库
-                       ├── D3.js 可视化
-                       ├── LLM 清洗管线
-                       └── metaso 搜索
-```
-
-对外访问通过 Caddy 反向代理：
-```
-http://10.24.242.176:8000/supply/api/
+┌─────────┐  发起研究需求   ┌──────────┐  驱动工具集   ┌──────────────────┐
+│  用户   │ ────────────→  │    GA    │ ──────────→ │ A-supply-analysis │
+└─────────┘               └──────────┘              │ (REST API :8765)  │
+       ↑                      │                     └──────────────────┘
+       │   交付研究结果        │                          │
+       └───────────────────────┘                    ┌────┴────────┐
+                                                     │ Neo4j  D3  │
+                                                     │ LLM   OWL  │
+                                                     └─────────────┘
 ```
