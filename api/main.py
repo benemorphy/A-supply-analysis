@@ -10,6 +10,7 @@ os.environ.get("NEO4J_PASSWORD","")"
 import sys, os, json, uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import HTMLResponse
 from typing import List
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -94,18 +95,18 @@ def clean_supply_data(input_data: RawTextInput):
 def risk_analysis(company: str = os.environ.get("NEO4J_PASSWORD","")):
     os.environ.get("NEO4J_PASSWORD","")"供应链风险分析：单一客户依赖、传导路径os.environ.get("NEO4J_PASSWORD","")"
     risks = []
-    relevant = _relations if not company else [r for r in _relations if company in (r.get("source",os.environ.get("NEO4J_PASSWORD","")) or os.environ.get("NEO4J_PASSWORD","")) or company in (r.get("target",os.environ.get("NEO4J_PASSWORD","")) or os.environ.get("NEO4J_PASSWORD",""))]
+    relevant = _relations if not company else [r for r in _relations if company in (r.source or os.environ.get("NEO4J_PASSWORD","")) or company in (r.target or os.environ.get("NEO4J_PASSWORD",""))]
     for r in relevant:
-        ratio = r.get("ratio") or 0
+        ratio = r.ratio or 0
         if ratio > 25:
             risks.append({"type": "single_customer_dependency", "severity": "high", 
-                "detail": f"{r['source']} 对 {r['target']} 依赖度过高 ({ratio}%)"})
+                "detail": f"{r.source} 对 {r.target} 依赖度过高 ({ratio}%)"})
     if not company or company in ("宁德时代",):
         for up in _relations:
-            if up.get("target") == "宁德时代" and up.get("relation_type") == "客户":
-                ratio = up.get("ratio") or 0
+            if up.target == "宁德时代" and up.relation_type == "客户":
+                ratio = up.ratio or 0
                 risks.append({"type": "supply_chain_critical_node", "severity": "medium",
-                    "detail": f"{up['source']}({ratio}%) → 宁德时代 → 比亚迪"})
+                    "detail": f"{up.source}({ratio}%) -> 宁德时代 -> 比亚迪"})
     return {"company": company or "all", "risk_count": len(risks), "risks": risks}
 
 
@@ -122,12 +123,12 @@ def report():
         report_lines.append(f"- {name}")
     
     # 关系统计
-    cats = [r for r in _relations if r["relation_type"] == "客户"]
+    cats = [r for r in _relations if r.relation_type == "客户"]
     report_lines.append(f"\n## 供应链关系 ({len(cats)} 条)\n")
     report_lines.append("| 上游公司 | 下游客户 | 占比 |")
     report_lines.append("|---------|---------|:----:|")
-    for r in sorted(cats, key=lambda x: -(x.get("ratio") or 0)):
-        report_lines.append(f"| {r['source']} | {r['target']} | {r.get('ratio', '?')}% |")
+    for r in sorted(cats, key=lambda x: -(x.ratio or 0)):
+        report_lines.append(f"| {r.source} | {r.target} | {r.ratio or '?'}% |")
     
     report_lines.append(f"\n### 风险提示\n")
     report_lines.append("- 当升科技对宁德时代依赖度达 30%，存在单一客户风险")
@@ -145,13 +146,13 @@ def visualize():
     for c in _companies.values():
         segment = "未知"
         for r in _relations:
-            if r["source"] == c.name:
-                segment = {"客户": "下游", "供应商": "上游"}.get(r["relation_type"], "中游")
+            if r.source == c.name:
+                segment = {"客户": "下游", "供应商": "上游"}.get(r.relation_type, "中游")
         nodes[c.name] = {"id": c.name, "group": segment}
     
     links = []
     for r in _relations:
-        links.append({"source": r["source"], "target": r["target"], "value": r.get("ratio", 10)})
+        links.append({"source": r.source, "target": r.target, "value": r.ratio or 10})
     
     return {"nodes": list(nodes.values()), "links": links}
 
