@@ -136,6 +136,67 @@ def report():
     return {"report": "\n".join(report_lines)}
 
 
+# ── 可视化 ──
+
+@app.get("/api/visualize")
+def visualize():
+    os.environ.get("NEO4J_PASSWORD","")"返回 D3 力导向图格式的 JSONos.environ.get("NEO4J_PASSWORD","")"
+    nodes = {}
+    for c in _companies.values():
+        segment = "未知"
+        for r in _relations:
+            if r["source"] == c.name:
+                segment = {"客户": "下游", "供应商": "上游"}.get(r["relation_type"], "中游")
+        nodes[c.name] = {"id": c.name, "group": segment}
+    
+    links = []
+    for r in _relations:
+        links.append({"source": r["source"], "target": r["target"], "value": r.get("ratio", 10)})
+    
+    return {"nodes": list(nodes.values()), "links": links}
+
+
+@app.get("/api/graph-view")
+def graph_view():
+    os.environ.get("NEO4J_PASSWORD","")"供应链关系图 HTML 页面os.environ.get("NEO4J_PASSWORD","")"
+    return HTMLResponse(GRAPH_HTML)
+
+
+GRAPH_HTML = ros.environ.get("NEO4J_PASSWORD","")"
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>供应链关系图</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>body{margin:0;background:#1a1a2e;overflow:hidden;font-family:sans-serif}
+svg{width:100vw;height:100vh}
+text{font-size:12px;fill:#eee;pointer-events:none}
+.links line{stroke-opacity:0.6;stroke-width:2px}
+.labels text{font-size:11px;fill:#ccc}
+.tooltip{position:absolute;background:rgba(0,0,0,0.8);color:#fff;padding:8px;border-radius:4px;font-size:13px;display:none}
+</style></head><body>
+<div id="tooltip" class="tooltip"></div>
+<svg id="graph"></svg>
+<script>
+fetch('/api/visualize').then(r=>r.json()).then(data=>{
+  const svg=d3.select('#graph'), w=window.innerWidth, h=window.innerHeight
+  const sim=d3.forceSimulation(data.nodes)
+    .force('link',d3.forceLink(data.links).id(d=>d.id).distance(200))
+    .force('charge',d3.forceManyBody().strength(-500))
+    .force('center',d3.forceCenter(w/2,h/2))
+  const link=svg.append('g').selectAll('line').data(data.links).join('line')
+    .attr('stroke',d=>d.source.group==='上游'?'#4fc3f7':d=>d.target.group==='下游'?'#ff7043':'#66bb6a')
+    .attr('stroke-width',d=>Math.sqrt(d.value||10))
+  const node=svg.append('g').selectAll('circle').data(data.nodes).join('circle')
+    .attr('r',8).attr('fill',d=>d.group==='上游'?'#4fc3f7':d.group==='下游'?'#ff7043':'#66bb6a')
+    .call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y})
+      .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}))
+    .on('mouseover',(e,d)=>{d3.select('#tooltip').style('display','block').html(`${d.id}<br>环节:${d.group}`).style('left',e.pageX+10+'px').style('top',e.pageY-20+'px')})
+    .on('mouseout',()=>d3.select('#tooltip').style('display','none'))
+  const label=svg.append('g').selectAll('text').data(data.nodes).join('text').text(d=>d.id).attr('x',12).attr('y',4)
+  sim.on('tick',()=>{link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);node.attr('cx',d=>d.x).attr('cy',d=>d.y);label.attr('x',d=>d.x+12).attr('y',d=>d.y+4)})
+})
+</script></body></html>os.environ.get("NEO4J_PASSWORD","")"
+
+
 # ── 健康检查 ──
 
 @app.get("/api/health")
