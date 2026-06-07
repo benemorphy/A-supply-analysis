@@ -1,0 +1,9 @@
+[
+  {"name": "天齐锂业股份有限公司", "stock_code": "002466.SZ", "segment": "上游", "sub_category": "锂矿"},
+  {"name": "华友钴业股份有限公司", "stock_code": "600516.SH", "segment": "上游", "sub_category": "钴矿"},
+  {"name": "当升科技股份有限公司", "stock_code": "300073.SZ", "segment": "上游", "sub_category": "正极材料"},
+  {"name": "恩捷股份股份有限公司", "stock_code": "002812.SZ", "segment": "上游", "sub_category": "隔膜"},
+  {"name": "天赐材料股份有限公司", "stock_code": "002709.SZ", "segment": "上游", "sub_category": "电解液"},
+  {"name": "宁德时代新能源科技股份有限公司", "stock_code": "300750.SZ", "segment": "中游", "sub_category": "动力电池制造"},
+  {"name": "比亚迪股份有限公司", "stock_code": "002594.SZ", "segment": "下游", "sub_category": "整车制造"}
+]
